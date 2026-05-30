@@ -1,0 +1,22 @@
+name: Remove TipTap Pro Dependency
+on: workflow_dispatch # Allows you to run it manually with a click
+
+jobs:
+  remove-dependency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: Update-Buildtime-Env
+      - name: Run Cleanup Commands
+        run: |
+          sed -i '/"@tiptap-pro\/extension-unique-id"/d' web/package.json space/package.json
+          sed -i '/from "@tiptap-pro\/extension-unique-id"/d' web/components/tiptap/extensions/index.tsx space/components/tiptap/extensions/index.tsx
+          perl -0pi -e 's/\s*UniqueID\.configure\(\{\s*types:\s*\["image"\],\s*\}\),//g' web/components/tiptap/extensions/index.tsx space/components/tiptap/extensions/index.tsx
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+          git add web/package.json space/package.json web/components/tiptap/extensions/index.tsx space/components/tiptap/extensions/index.tsx
+          git commit -m "Remove @tiptap-pro/extension-unique-id (use OSS-only deps)"
+          git push origin Update-Buildtime-Env
