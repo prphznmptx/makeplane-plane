@@ -48,7 +48,30 @@ let projects = {
 const SECRET = 'mock-secret-key';
 
 function generateToken(userId) {
-  return jwt.sign({ user_id: userId, email: users[Object.keys(users)[0]].email }, SECRET, { expiresIn: '24h' });
+  return jwt.sign({ user_id: userId, email: users['demo@example.com'].email }, SECRET, { expiresIn: '24h' });
+}
+
+function extractToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return null;
+  if (authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  return authHeader.split(' ')[1] || null;
+}
+
+function verifyTokenMiddleware(req, res, next) {
+  const token = extractToken(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  try {
+    jwt.verify(token, SECRET);
+    next();
+  } catch (err) {
+    console.error('Token verification failed:', err.message);
+    res.status(401).json({ error: 'Invalid token' });
+  }
 }
 
 // Auth endpoints
@@ -60,7 +83,6 @@ app.post('/api/sign-in/', (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
   
-  // Mock password check - any password works for demo
   if (!password) {
     return res.status(401).json({ error: 'Password is required' });
   }
@@ -147,62 +169,32 @@ app.post('/api/sign-out/', (req, res) => {
 });
 
 // User endpoints
-app.get('/api/users/me/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(token, SECRET);
-    const demoUser = users['demo@example.com'];
-    res.json(demoUser);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+app.get('/api/users/me/', verifyTokenMiddleware, (req, res) => {
+  const demoUser = users['demo@example.com'];
+  res.json(demoUser);
 });
 
-app.patch('/api/users/me/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(token, SECRET);
-    const demoUser = users['demo@example.com'];
-    Object.assign(demoUser, req.body);
-    res.json(demoUser);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+app.patch('/api/users/me/', verifyTokenMiddleware, (req, res) => {
+  const demoUser = users['demo@example.com'];
+  Object.assign(demoUser, req.body);
+  res.json(demoUser);
 });
 
-app.patch('/api/users/me/onboard/', (req, res) => {
+app.patch('/api/users/me/onboard/', verifyTokenMiddleware, (req, res) => {
   const demoUser = users['demo@example.com'];
   demoUser.is_onboarded = true;
   res.json(demoUser);
 });
 
-app.patch('/api/users/me/tour-completed/', (req, res) => {
+app.patch('/api/users/me/tour-completed/', verifyTokenMiddleware, (req, res) => {
   const demoUser = users['demo@example.com'];
   demoUser.is_tour_completed = true;
   res.json(demoUser);
 });
 
 // Workspace endpoints
-app.get('/api/users/me/workspaces/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(token, SECRET);
-    res.json([workspaces['workspace-1']]);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+app.get('/api/users/me/workspaces/', verifyTokenMiddleware, (req, res) => {
+  res.json([workspaces['workspace-1']]);
 });
 
 app.get('/api/users/me/invitations/workspaces/', (req, res) => {
@@ -210,43 +202,23 @@ app.get('/api/users/me/invitations/workspaces/', (req, res) => {
 });
 
 // Dashboard endpoint
-app.get('/api/users/me/workspaces/:workspaceSlug/dashboard/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(token, SECRET);
-    res.json({
-      overdue_issues: [],
-      upcoming_issues: [],
-      state_distribution: {},
-      completed_issues: [],
-      total_issues: 0,
-    });
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+app.get('/api/users/me/workspaces/:workspaceSlug/dashboard/', verifyTokenMiddleware, (req, res) => {
+  res.json({
+    overdue_issues: [],
+    upcoming_issues: [],
+    state_distribution: {},
+    completed_issues: [],
+    total_issues: 0,
+  });
 });
 
 // Project endpoints
-app.get('/api/workspaces/:workspaceSlug/projects/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(token, SECRET);
-    res.json([projects['project-1']]);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+app.get('/api/workspaces/:workspaceSlug/projects/', verifyTokenMiddleware, (req, res) => {
+  res.json([projects['project-1']]);
 });
 
 const PORT = 8000;
-app.listen(PORT, () => {
-  console.log(`Mock API server running on http://localhost:${PORT}`);
-  console.log('Demo credentials: demo@example.com / any password');
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✓ Mock API server running on http://0.0.0.0:${PORT}`);
+  console.log(`Demo credentials: demo@example.com / any-password`);
 });
