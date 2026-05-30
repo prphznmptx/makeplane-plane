@@ -17,7 +17,6 @@ import { InputRule } from "@tiptap/core";
 import ts from "highlight.js/lib/languages/typescript";
 
 import "highlight.js/styles/github-dark.css";
-import UniqueID from "@tiptap-pro/extension-unique-id";
 import UpdatedImage from "./updated-image";
 import isValidHttpUrl from "../bubble-menu/utils/link-validator";
 
@@ -110,9 +109,6 @@ export const TiptapExtensions = (
       return "Press '/' for commands...";
     },
     includeChildren: true,
-  }),
-  UniqueID.configure({
-    types: ["image"],
   }),
   SlashCommand(workspaceSlug, setIsSubmitting),
   TiptapUnderline,
